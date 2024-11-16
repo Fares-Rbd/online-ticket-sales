@@ -1,0 +1,15 @@
+server:
+  port: 8888 # D�finit le port sur lequel votre config-server sera disponible
+
+spring:
+  cloud:
+    config:
+      server:
+        git:
+          uri: https://github.com/Fares-Rbd/ecommerce-microservice.git
+          default-label: master
+          search-paths:
+            - product-microservice
+            - user-microservice
+    compatibility-verifier:
+      enabled: false
