@@ -1,15 +1,21 @@
 server:
-  port: 8888 # D�finit le port sur lequel votre config-server sera disponible
+  port: 8888
 
 spring:
+  application:
+    name: config-server
   cloud:
     config:
       server:
         git:
-          uri: https://github.com/Fares-Rbd/ecommerce-microservice.git
-          default-label: master
-          search-paths:
-            - product-microservice
-            - user-microservice
-    compatibility-verifier:
-      enabled: false
+          uri: https://github.com/Fares-Rbd/ticket-sales-config.git
+          username: ${GIT_USERNAME}
+          password: ${GIT_PASSWORD}
+          default-label: master # Branch to fetch configurations from
+      fail-fast: true
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
