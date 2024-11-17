@@ -6,7 +6,8 @@ An **event ticket sales platform** built using a **microservices architecture** 
 
 ## **Class Diagram**
 
-![image](https://github.com/user-attachments/assets/ba479eb2-730c-4209-90a7-8d6356eb29de)
+![image](https://github.com/user-attachments/assets/6649dbb0-6864-4780-b8b6-28275219bc0e)
+
 
 ---
 
@@ -89,10 +90,69 @@ The application uses a **microservices architecture** where each service is inde
 ### Prerequisites
 - **Java 17+**
 - **Maven**
-- **MySQL/PostgreSQL**
-  
+- **MySQL/PostgreSQL** (or H2 for testing)
+- **Docker** (Optional)
+
 ### Steps to Run
 1. Clone the repository:
    ```bash
    git clone https://github.com/your-username/online-ticket-sales.git
    cd online-ticket-sales
+   ```
+
+2. Set up the Config Server:
+   - Navigate to the `config-server` folder.
+   - Run the server:
+     ```bash
+     mvn spring-boot:run
+     ```
+
+3. Start the Eureka Server:
+   - Navigate to the `discovery-server` folder.
+   - Run the server:
+     ```bash
+     mvn spring-boot:run
+     ```
+
+4. Start each microservice:
+   - For each service (`user-management`, `event-management`, `ticket-management`), navigate to the respective folder and run:
+     ```bash
+     mvn spring-boot:run
+     ```
+
+5. Access the application:
+   - **Eureka Dashboard**: `http://localhost:8761`
+   - APIs: Swagger UI (e.g., `http://localhost:<service-port>/swagger-ui.html`).
+
+---
+
+## **API Endpoints**
+### **User Management**
+| Method | Endpoint          | Description           |
+|--------|-------------------|-----------------------|
+| POST   | `/users`          | Create a new user.    |
+| GET    | `/users/{id}`     | Fetch user by ID.     |
+| GET    | `/users`          | List all users.       |
+
+### **Event Management**
+| Method | Endpoint              | Description                |
+|--------|-----------------------|----------------------------|
+| POST   | `/events`             | Create a new event.        |
+| GET    | `/events/{id}`        | Fetch event by ID.         |
+| GET    | `/categories`         | List all categories.       |
+
+### **Ticket Management**
+| Method | Endpoint                          | Description                         |
+|--------|-----------------------------------|-------------------------------------|
+| POST   | `/tickets`                        | Add a ticket for an event.          |
+| GET    | `/tickets`                        | List all tickets.                   |
+| GET    | `/revenues`                       | Calculate event revenue.            |
+| GET    | `/users/most-active`              | Identify the most active user.      |
+
+---
+
+## **Future Improvements**
+- Implement Docker and Kubernetes for containerization and orchestration.
+- Add RabbitMQ/Kafka for event-driven communication.
+- Use Prometheus and Grafana for monitoring.
+- Implement security with OAuth2/Keycloak.
