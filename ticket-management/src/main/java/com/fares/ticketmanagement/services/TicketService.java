@@ -1,6 +1,5 @@
 package com.fares.ticketmanagement.services;
 
-
 import com.fares.ticketmanagement.clients.EventClient;
 import com.fares.ticketmanagement.dto.Event;
 import com.fares.ticketmanagement.entities.Ticket;
@@ -44,15 +43,19 @@ public class TicketService {
         });
         return ticketRepository.saveAll(tickets);
     }
+
     public Double calculateRevenue(Long idEvent, TypeTicket typeTicket) {
         return ticketRepository.sumPrixTicketByIdEventAndTypeTicket(idEvent, typeTicket);
     }
 
     public Long getMostActiveUser() {
-        List<Object[]> userTicketCounts = ticketRepository.countTicketsByIdInternaute();
+        // Fetch ticket counts grouped by user
+        List<Object[]> userTicketCounts = ticketRepository.countTicketsGroupedByIdInternaute();
+
+        // Find the user with the highest ticket count
         return userTicketCounts.stream()
-                .max((a, b) -> (Long) a[1] - (Long) b[1])
-                .map(a -> (Long) a[0])
+                .max((a, b) -> ((Long) a[1]).compareTo((Long) b[1])) // Compare ticket counts
+                .map(a -> (Long) a[0]) // Return the ID of the most active user
                 .orElseThrow(() -> new RuntimeException("No users found"));
     }
 }
