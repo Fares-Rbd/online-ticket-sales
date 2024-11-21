@@ -1,9 +1,11 @@
 package com.fares.ticketmanagement.services;
 
 import com.fares.ticketmanagement.clients.EventClient;
-import com.fares.ticketmanagement.dto.Event;
+import com.fares.ticketmanagement.clients.UserClient;
+import com.fares.ticketmanagement.entities.Evenement;
 import com.fares.ticketmanagement.entities.Ticket;
 import com.fares.ticketmanagement.entities.TypeTicket;
+import com.fares.ticketmanagement.entities.User;
 import com.fares.ticketmanagement.repositories.TicketRepository;
 import org.springframework.stereotype.Service;
 
@@ -14,48 +16,64 @@ public class TicketService {
 
     private final TicketRepository ticketRepository;
     private final EventClient eventClient;
+    private final UserClient userClient;
 
-    public TicketService(TicketRepository ticketRepository, EventClient eventClient) {
+    public TicketService(TicketRepository ticketRepository, EventClient eventClient, UserClient userClient) {
         this.ticketRepository = ticketRepository;
         this.eventClient = eventClient;
+        this.userClient = userClient;
     }
 
-    public List<Ticket> addTickets(List<Ticket> tickets, Long idEvent, Long idInternaute) {
-        // Fetch event details from Event Microservice
-        Event event = eventClient.getEventById(idEvent);
-
-        if (event == null) {
-            throw new RuntimeException("Event not found with id: " + idEvent);
+    // D. Add tickets and associate them with event and internaute, update seats in the event
+    public List<Ticket> ajouterTicketsEtAffecterAEvenementEtInternaute(List<Ticket> tickets, Long idEvenement, Long idInternaute) {
+        // Fetch user details from User Management Microservice
+        User user = userClient.getUserById(idInternaute);
+        if (user == null) {
+            throw new RuntimeException("User not found with ID: " + idInternaute);
         }
 
+        // Fetch event details from Event Management Microservice
+        Evenement event = eventClient.findById(idEvenement);
         if (event.getNbPlacesRestantes() < tickets.size()) {
-            throw new UnsupportedOperationException("Nombre de places demandées indisponible");
+            throw new UnsupportedOperationException("nombre de places demandées indisponible");
         }
 
-        // Update event seat count
+        // Update the remaining seats in the event
         event.setNbPlacesRestantes(event.getNbPlacesRestantes() - tickets.size());
-        eventClient.updateEvent(idEvent, event);
+        eventClient.updateRemainingSeats(idEvenement, event.getNbPlacesRestantes());
 
-        // Save tickets
+        // Assign tickets to the event and user
         tickets.forEach(ticket -> {
-            ticket.setIdEvent(idEvent);
+            ticket.setIdEvent(idEvenement);
             ticket.setIdInternaute(idInternaute);
         });
+
         return ticketRepository.saveAll(tickets);
     }
 
-    public Double calculateRevenue(Long idEvent, TypeTicket typeTicket) {
-        return ticketRepository.sumPrixTicketByIdEventAndTypeTicket(idEvent, typeTicket);
+    // E. Calculate revenue for an event and ticket type
+    public Double montantRecupereParEvtEtTypeTicket(Long id, TypeTicket typeTicket) {
+        Evenement event = eventClient.findById(id);
+        List<Ticket> tickets = ticketRepository.findByIdEventAndTypeTicket(event.getId(), typeTicket);
+
+        // Calculate total revenue
+        return tickets.stream()
+                .mapToDouble(Ticket::getPrixTicket)
+                .sum();
     }
 
-    public Long getMostActiveUser() {
+    public User getMostActiveUser() {
         // Fetch ticket counts grouped by user
         List<Object[]> userTicketCounts = ticketRepository.countTicketsGroupedByIdInternaute();
 
-        // Find the user with the highest ticket count
-        return userTicketCounts.stream()
+        // Find the user ID with the highest ticket count
+        Long mostActiveUserId = userTicketCounts.stream()
                 .max((a, b) -> ((Long) a[1]).compareTo((Long) b[1])) // Compare ticket counts
-                .map(a -> (Long) a[0]) // Return the ID of the most active user
+                .map(a -> (Long) a[0]) // Extract the user ID
                 .orElseThrow(() -> new RuntimeException("No users found"));
+
+        // Fetch user details from User Management Microservice
+        return userClient.getUserById(mostActiveUserId);
     }
+
 }
