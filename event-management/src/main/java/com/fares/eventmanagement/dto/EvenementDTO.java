@@ -16,7 +16,6 @@ import java.util.Set;
 @Setter
 @ToString
 public class EvenementDTO {
-
     private String nomEvenement;
     private int nbPlacesRestantes;
     private LocalDate dateEvenement;
