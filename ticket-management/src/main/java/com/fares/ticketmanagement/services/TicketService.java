@@ -7,6 +7,8 @@ import com.fares.ticketmanagement.entities.Ticket;
 import com.fares.ticketmanagement.entities.TypeTicket;
 import com.fares.ticketmanagement.entities.User;
 import com.fares.ticketmanagement.repositories.TicketRepository;
+import io.github.resilience4j.circuitbreaker.annotation.CircuitBreaker;
+import io.github.resilience4j.retry.annotation.Retry;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -25,24 +27,22 @@ public class TicketService {
     }
 
     // D. Add tickets and associate them with event and internaute, update seats in the event
+    @CircuitBreaker(name = "default", fallbackMethod = "fallbackAjouterTickets")
+    @Retry(name = "default", fallbackMethod = "fallbackAjouterTickets")
     public List<Ticket> ajouterTicketsEtAffecterAEvenementEtInternaute(List<Ticket> tickets, Long idEvenement, Long idInternaute) {
-        // Fetch user details from User Management Microservice
         User user = userClient.getUserById(idInternaute);
         if (user == null) {
             throw new RuntimeException("User not found with ID: " + idInternaute);
         }
 
-        // Fetch event details from Event Management Microservice
         Evenement event = eventClient.findById(idEvenement);
         if (event.getNbPlacesRestantes() < tickets.size()) {
             throw new UnsupportedOperationException("nombre de places demandées indisponible");
         }
 
-        // Update the remaining seats in the event
         event.setNbPlacesRestantes(event.getNbPlacesRestantes() - tickets.size());
         eventClient.updateRemainingSeats(idEvenement, event.getNbPlacesRestantes());
 
-        // Assign tickets to the event and user
         tickets.forEach(ticket -> {
             ticket.setIdEvent(idEvenement);
             ticket.setIdInternaute(idInternaute);
@@ -51,29 +51,41 @@ public class TicketService {
         return ticketRepository.saveAll(tickets);
     }
 
+
     // E. Calculate revenue for an event and ticket type
+    @CircuitBreaker(name = "default", fallbackMethod = "fallbackMontantRecupere")
+    @Retry(name = "default", fallbackMethod = "fallbackMontantRecupere")
     public Double montantRecupereParEvtEtTypeTicket(Long id, TypeTicket typeTicket) {
         Evenement event = eventClient.findById(id);
         List<Ticket> tickets = ticketRepository.findByIdEventAndTypeTicket(event.getId(), typeTicket);
 
-        // Calculate total revenue
         return tickets.stream()
                 .mapToDouble(Ticket::getPrixTicket)
                 .sum();
     }
 
-    public User getMostActiveUser() {
-        // Fetch ticket counts grouped by user
-        List<Object[]> userTicketCounts = ticketRepository.countTicketsGroupedByIdInternaute();
 
-        // Find the user ID with the highest ticket count
+    @CircuitBreaker(name = "default", fallbackMethod = "fallbackGetMostActiveUser")
+    @Retry(name = "default", fallbackMethod = "fallbackGetMostActiveUser")
+    public User getMostActiveUser() {
+        List<Object[]> userTicketCounts = ticketRepository.countTicketsGroupedByIdInternaute();
         Long mostActiveUserId = userTicketCounts.stream()
-                .max((a, b) -> ((Long) a[1]).compareTo((Long) b[1])) // Compare ticket counts
-                .map(a -> (Long) a[0]) // Extract the user ID
+                .max((a, b) -> ((Long) a[1]).compareTo((Long) b[1]))
+                .map(a -> (Long) a[0])
                 .orElseThrow(() -> new RuntimeException("No users found"));
 
-        // Fetch user details from User Management Microservice
         return userClient.getUserById(mostActiveUserId);
     }
 
+    public List<Ticket> fallbackAjouterTickets(List<Ticket> tickets, Long idEvenement, Long idInternaute, Throwable throwable) {
+        throw new RuntimeException("Failed to add tickets and associate with event and user. Reason: " + throwable.getMessage());
+    }
+
+    public Double fallbackMontantRecupere(Long id, TypeTicket typeTicket, Throwable throwable) {
+        throw new RuntimeException("Failed to calculate revenue for event and ticket type. Reason: " + throwable.getMessage());
+    }
+
+    public User fallbackGetMostActiveUser(Throwable throwable) {
+        throw new RuntimeException("Failed to retrieve most active user. Reason: " + throwable.getMessage());
+    }
 }

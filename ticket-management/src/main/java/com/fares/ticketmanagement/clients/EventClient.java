@@ -12,4 +12,13 @@ public interface EventClient {
 
     @GetMapping("/by-id")
     Evenement findById(@RequestParam Long id);
+
+    default Evenement fallbackUpdateRemainingSeats(Long idEvenement, int remainingSeats, Throwable throwable) {
+        throw new RuntimeException("Failed to update remaining seats for event ID: " + idEvenement + ". Reason: " + throwable.getMessage());
+    }
+
+    default Evenement fallbackFindById(Long id, Throwable throwable) {
+        throw new RuntimeException("Failed to find event by ID: " + id + ". Reason: " + throwable.getMessage());
+    }
 }
+

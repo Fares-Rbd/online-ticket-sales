@@ -10,4 +10,9 @@ public interface UserClient {
 
     @GetMapping("/{id}")
     User getUserById(@PathVariable Long id);
+
+    default User fallbackGetUserById(Long id, Throwable throwable) {
+        throw new RuntimeException("Failed to retrieve user by ID: " + id + ". Reason: " + throwable.getMessage());
+    }
 }
+

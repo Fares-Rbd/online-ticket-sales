@@ -7,8 +7,8 @@ import lombok.Setter;
 @Setter
 public class Evenement {
 
-    private Long id;                // Event ID
-    private String nomEvenement;    // Event name
-    private int nbPlacesRestantes;  // Remaining seats for the event
-    private String dateEvenement;   // Event date (optional, based on your needs)
+    private Long id;
+    private String nomEvenement;
+    private int nbPlacesRestantes;
+    private String dateEvenement;
 }
