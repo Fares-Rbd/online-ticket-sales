@@ -8,7 +8,6 @@ An **event ticket sales platform** built using a **microservices architecture** 
 
 ![image](https://github.com/user-attachments/assets/6649dbb0-6864-4780-b8b6-28275219bc0e)
 
-
 ---
 
 ## **Features**
@@ -27,10 +26,15 @@ An **event ticket sales platform** built using a **microservices architecture** 
   - Calculate event revenue based on ticket sales.
   - Identify the most active user.
 
+- **Monitoring & Resilience**:
+  - **Resilience4j** for fault tolerance (Retry, Circuit Breaker).
+  - **Prometheus & Grafana** for real-time monitoring of microservices.
+  - **Micrometer** integration for exporting metrics.
+
 ---
 
 ## **Microservices Overview**
-The platform is divided into five microservices:
+The platform is divided into six microservices:
 
 ### 1. **User Management Service** (`user-management`)
 - Manages user details (e.g., name, age group).
@@ -52,6 +56,10 @@ The platform is divided into five microservices:
 ### 5. **Config Server** (`config-server`)
 - Centralized configuration management for all microservices.
 
+### 6. **Monitoring**:
+- **Prometheus**: Scrapes metrics exposed by the microservices.
+- **Grafana**: Visualizes Prometheus metrics with rich dashboards.
+
 ---
 
 ## **Technologies Used**
@@ -60,29 +68,13 @@ The platform is divided into five microservices:
   - Eureka (Service Discovery)
   - Config Server (Centralized Configuration)
   - OpenFeign (Inter-service communication)
+- **Resilience4j**: Fault tolerance (Retry, Circuit Breaker).
+- **Micrometer**: Metric instrumentation.
+- **Prometheus**: Metrics collection and alerting.
+- **Grafana**: Visual monitoring dashboards.
 - **Spring Data JPA**: ORM and database interaction.
-- **H2/MySQL/PostgreSQL**: Database layers for services.
-- **Spring AOP**: For logging and cross-cutting concerns.
-- **Spring Scheduler**: For periodic tasks.
-- **Maven**: Build and dependency management.
-- **Lombok**: To reduce boilerplate code.
-- **Docker** (Future Scope): Containerization.
-
----
-
-## **Architecture**
-The application uses a **microservices architecture** where each service is independently deployable and communicates through REST APIs or event-driven messaging.
-
-### **Service Relationships**
-- **User Management** ↔ **Ticket Management**:
-  - `Ticket Management` uses `User Management` to validate and fetch user details.
-  
-- **Event Management** ↔ **Ticket Management**:
-  - `Ticket Management` checks and updates event availability through `Event Management`.
-
-### **Inter-Service Communication**
-- **REST API** using OpenFeign.
-- **Service Discovery** through Eureka Server.
+- **MySQL**: Database layers for services.
+- **Docker**: Containerization.
 
 ---
 
@@ -90,69 +82,98 @@ The application uses a **microservices architecture** where each service is inde
 ### Prerequisites
 - **Java 17+**
 - **Maven**
-- **MySQL/PostgreSQL** (or H2 for testing)
-- **Docker** (Optional)
+- **Docker**
+- **Docker Compose** (Optional for running Prometheus and Grafana).
 
-### Steps to Run
-1. Clone the repository:
-   ```bash
-   git clone https://github.com/your-username/online-ticket-sales.git
-   cd online-ticket-sales
+---
+
+## **Monitoring Setup**
+### **Prometheus**
+1. Create a `prometheus.yml` file with the following content:
+   ```yaml
+   global:
+     scrape_interval: 15s
+
+   scrape_configs:
+     - job_name: 'ticket-service'
+       metrics_path: '/actuator/prometheus'
+       static_configs:
+         - targets: ['host.docker.internal:8083']
+
+     - job_name: 'event-service'
+       metrics_path: '/actuator/prometheus'
+       static_configs:
+         - targets: ['host.docker.internal:8082']
+
+     - job_name: 'user-service'
+       metrics_path: '/actuator/prometheus'
+       static_configs:
+         - targets: ['host.docker.internal:8081']
    ```
 
-2. Set up the Config Server:
-   - Navigate to the `config-server` folder.
-   - Run the server:
-     ```bash
-     mvn spring-boot:run
-     ```
+2. Run Prometheus with Docker:
+   ```bash
+   docker run -d \
+     -p 9090:9090 \
+     -v /path/to/prometheus.yml:/etc/prometheus/prometheus.yml \
+     --name prometheus prom/prometheus
+   ```
 
-3. Start the Eureka Server:
-   - Navigate to the `discovery-server` folder.
-   - Run the server:
-     ```bash
-     mvn spring-boot:run
-     ```
+3. Access Prometheus Dashboard:
+   - URL: [http://localhost:9090](http://localhost:9090)
 
-4. Start each microservice:
-   - For each service (`user-management`, `event-management`, `ticket-management`), navigate to the respective folder and run:
-     ```bash
-     mvn spring-boot:run
-     ```
+---
 
-5. Access the application:
-   - **Eureka Dashboard**: `http://localhost:8761`
-   - APIs: Swagger UI (e.g., `http://localhost:<service-port>/swagger-ui.html`).
+### **Grafana**
+1. Run Grafana with Docker:
+   ```bash
+   docker run -d \
+     -p 3000:3000 \
+     --name grafana grafana/grafana
+   ```
+
+2. Access Grafana Dashboard:
+   - URL: [http://localhost:3000](http://localhost:3000)
+   - Default Username: `admin`
+   - Default Password: `admin`
+
+3. Add Prometheus as a Data Source in Grafana:
+   - Navigate to **Configuration** > **Data Sources**.
+   - Add a new Prometheus data source with URL: `http://host.docker.internal:9090` (or `http://localhost:9090` for non-Docker setups).
+
+4. Import Dashboards:
+   - Use dashboard templates like:
+     - **Micrometer Dashboard** (ID: `4701`).
+     - **Spring Boot Actuator Dashboard** (ID: `6756`).
 
 ---
 
 ## **API Endpoints**
 ### **User Management**
-| Method | Endpoint          | Description           |
-|--------|-------------------|-----------------------|
-| POST   | `/users`          | Create a new user.    |
-| GET    | `/users/{id}`     | Fetch user by ID.     |
-| GET    | `/users`          | List all users.       |
+| Method | Endpoint                        | Description                     |
+|--------|---------------------------------|---------------------------------|
+| POST   | `http://localhost:8081/api/users`         | Create a new user.             |
+| GET    | `http://localhost:8081/api/users/{id}`    | Fetch user by ID.              |
+| GET    | `http://localhost:8081/api/users`         | List all users.                |
 
 ### **Event Management**
-| Method | Endpoint              | Description                |
-|--------|-----------------------|----------------------------|
-| POST   | `/events`             | Create a new event.        |
-| GET    | `/events/{id}`        | Fetch event by ID.         |
-| GET    | `/categories`         | List all categories.       |
+| Method | Endpoint                        | Description                     |
+|--------|---------------------------------|---------------------------------|
+| POST   | `http://localhost:8082/api/events`        | Create a new event.            |
+| GET    | `http://localhost:8082/api/events/{id}`   | Fetch event by ID.             |
+| GET    | `http://localhost:8082/api/categories`    | List all categories.           |
 
 ### **Ticket Management**
-| Method | Endpoint                          | Description                         |
-|--------|-----------------------------------|-------------------------------------|
-| POST   | `/tickets`                        | Add a ticket for an event.          |
-| GET    | `/tickets`                        | List all tickets.                   |
-| GET    | `/revenues`                       | Calculate event revenue.            |
-| GET    | `/users/most-active`              | Identify the most active user.      |
+| Method | Endpoint                        | Description                     |
+|--------|---------------------------------|---------------------------------|
+| POST   | `http://localhost:8083/api/tickets`       | Add a ticket for an event.     |
+| GET    | `http://localhost:8083/api/tickets`       | List all tickets.              |
+| GET    | `http://localhost:8083/api/revenues`      | Calculate event revenue.       |
+| GET    | `http://localhost:8083/api/users/most-active` | Identify the most active user. |
 
 ---
 
 ## **Future Improvements**
-- Implement Docker and Kubernetes for containerization and orchestration.
-- Add RabbitMQ/Kafka for event-driven communication.
-- Use Prometheus and Grafana for monitoring.
-- Implement security with OAuth2/Keycloak.
+- Add alerting rules in Prometheus for SLA breaches.
+- Implement distributed tracing with **Zipkin** or **Jaeger**.
+- Introduce **Kafka** for asynchronous communication.
