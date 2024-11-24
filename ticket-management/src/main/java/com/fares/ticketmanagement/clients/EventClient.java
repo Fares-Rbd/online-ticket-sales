@@ -4,13 +4,13 @@ import com.fares.ticketmanagement.entities.Evenement;
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.*;
 
-@FeignClient(name = "event-service", url = "http://localhost:8082/api/evenements")
+@FeignClient(name = "event-management")
 public interface EventClient {
 
-    @PutMapping("/{idEvenement}/seats")
+    @PutMapping("/api/evenements/{idEvenement}/seats")
     Evenement updateRemainingSeats(@PathVariable Long idEvenement, @RequestParam int remainingSeats);
 
-    @GetMapping("/by-id")
+    @GetMapping("/api/evenements/by-id")
     Evenement findById(@RequestParam Long id);
 
     default Evenement fallbackUpdateRemainingSeats(Long idEvenement, int remainingSeats, Throwable throwable) {

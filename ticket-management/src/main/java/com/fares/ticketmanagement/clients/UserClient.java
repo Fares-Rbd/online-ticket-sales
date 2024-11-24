@@ -5,10 +5,10 @@ import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 
-@FeignClient(name = "user-service", url = "http://localhost:8081/api/users")
+@FeignClient(name = "user-management")
 public interface UserClient {
 
-    @GetMapping("/{id}")
+    @GetMapping("/api/users/{id}")
     User getUserById(@PathVariable Long id);
 
     default User fallbackGetUserById(Long id, Throwable throwable) {
