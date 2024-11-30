@@ -11,7 +11,7 @@ spring:
           uri: https://github.com/Fares-Rbd/ticket-sales-config.git
           username: ${GIT_USERNAME}
           password: ${GIT_PASSWORD}
-          default-label: master # Branch to fetch configurations from
+          default-label: master
       fail-fast: true
 
 management:
